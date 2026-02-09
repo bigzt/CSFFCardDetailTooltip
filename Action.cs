@@ -117,7 +117,7 @@ internal class Action
             if ((dropReport.DropsInfo == null || dropReport.DropsInfo.Length == 0) &&
                 action.ProducedCards != null && action.ProducedCards.Length > 0)
             {
-                dropReport = gm.GetCollectionDropsReport(action, currentCard, null, true);
+                dropReport = gm.GetCollectionDropsReport(action, currentCard, null, InGameNPCOrPlayer.PlayerAgent, true);
                 texts.Add(FormatCardDropList(dropReport, currentCard, action: action));
             }
 
@@ -158,7 +158,7 @@ internal class Action
         List<string> texts = new();
         for (int i = 0; i < report.DropsInfo.Length; i++)
         {
-            float dropRate = report.GetDropPercent(i, withStat, withCard, withDuability);
+            float dropRate = report.GetDropPercent(i, withStat, withCard, withDuability, InGameNPCOrPlayer.PlayerAgent);
             if (Plugin.HideImpossibleDropSet && report.DropsInfo.Length != 1 && dropRate < 0.00001 &&
                 (!report.DropsInfo[i].IsSuccess || report.DropsInfo[i].FinalWeight < -10000)) continue;
             string dropCardTexts = report.DropsInfo[i].Drops.Where(c => c != null).GroupBy(

@@ -2,7 +2,6 @@
 using MelonLoader;
 #else
 using BepInEx;
-using BepInEx.Logging;
 #endif
 using System;
 using System.Collections.Generic;
@@ -37,13 +36,13 @@ namespace CSFFCardDetailTooltip
         public static InGameStat InGamePlayerWeight;
         public static bool Enabled;
         public static KeyCode HotKey;
-        public static bool WeatherCardInspectable;
         public static bool RecipesShowTargetDuration;
         public static bool HideImpossibleDropSet;
         public static KeyCode TooltipNextPageHotKey;
         public static KeyCode TooltipPreviousPageHotKey;
         public static bool AdditionalEncounterLogMessage;
         public static bool ForceInspectStatInfos;
+        public static bool HasWikiMod106;
 
 
         public static InGameCardBase LastDragHoverCard;
@@ -52,7 +51,6 @@ namespace CSFFCardDetailTooltip
 #if MELON_LOADER
         private MelonPreferences_Category GeneralPreferencesCategory;
         private MelonPreferences_Category TweakPreferencesCategory;
-        private MelonPreferences_Entry<bool> WeatherCardInspectableEntry;
         private MelonPreferences_Entry<bool> EnabledEntry;
         private MelonPreferences_Entry<KeyCode> HotKeyEntry;
         private MelonPreferences_Entry<bool> RecipesShowTargetDurationEntry;
@@ -69,8 +67,6 @@ namespace CSFFCardDetailTooltip
  GeneralPreferencesCategory.CreateEntry(nameof(Enabled), true, "If true, will show the tool tips.");
             HotKeyEntry =
  GeneralPreferencesCategory.CreateEntry(nameof(HotKey), KeyCode.F2, "The key to enable and disable the tool tips");
-            WeatherCardInspectableEntry =
- GeneralPreferencesCategory.CreateEntry(nameof(WeatherCardInspectable), true, "If true, will make weather card inspect-able");
             RecipesShowTargetDurationEntry =
  TweakPreferencesCategory.CreateEntry(nameof(RecipesShowTargetDuration), false, "If true, will show the target duration of recipes");
             HideImpossibleDropSetEntry =
@@ -82,7 +78,6 @@ namespace CSFFCardDetailTooltip
                 false, "If true, stats like Bacteria Fever are forced to be inspectable.");
             Enabled = EnabledEntry.Value; 
             HotKey = HotKeyEntry.Value;
-            WeatherCardInspectable = WeatherCardInspectableEntry.Value;
             RecipesShowTargetDuration = RecipesShowTargetDurationEntry.Value;
             HideImpossibleDropSet = HideImpossibleDropSetEntry.Value;
             AdditionalEncounterLogMessage = AdditionalEncounterLogMessageEntry.Value;
@@ -110,9 +105,6 @@ namespace CSFFCardDetailTooltip
             Enabled = Config.Bind("General", nameof(Enabled), true, "If true, will show the tool tips.").Value;
             HotKey = Config.Bind("General", nameof(HotKey), KeyCode.F2, "The key to enable and disable the tool tips")
                 .Value;
-            WeatherCardInspectable = Config.Bind("General", nameof(WeatherCardInspectable), true,
-                    "If true, the weather card on the left side of the clock can be clicked to inspect. True is required for showing tooltip on it.")
-                .Value;
             RecipesShowTargetDuration = Config.Bind("Tweak", nameof(RecipesShowTargetDuration), false,
                 "If true, cookers like traps will show exact cooking duration instead of a range.").Value;
             HideImpossibleDropSet = Config.Bind("Tweak", nameof(HideImpossibleDropSet), true,
@@ -132,12 +124,22 @@ namespace CSFFCardDetailTooltip
             Harmony.CreateAndPatchAll(typeof(Action));
             Harmony.CreateAndPatchAll(typeof(Locale));
             Harmony.CreateAndPatchAll(typeof(TooltipMod));
-            Harmony.CreateAndPatchAll(typeof(PrefabMod));
             Harmony.CreateAndPatchAll(typeof(Encounter));
 
             Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
         }
 #endif
+
+        private void Start()
+        {
+#if !MELON_LOADER
+            if (BepInEx.Bootstrap.Chainloader.PluginInfos.TryGetValue("WikiMod", out PluginInfo pluginInfo))
+            {
+                HasWikiMod106 = pluginInfo.Metadata.Version >= new System.Version("1.0.6");
+                Logger.LogInfo($"Found WikiMod version {pluginInfo.Metadata.Version}.");
+            }
+#endif
+        }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameManager), "Update")]
@@ -193,7 +195,7 @@ namespace CSFFCardDetailTooltip
                         : __instance;
                 if (action.ProducedCards != null)
                 {
-                    CollectionDropReport dropReport = gm.GetCollectionDropsReport(action, currentCard, droppedCard, true);
+                    CollectionDropReport dropReport = gm.GetCollectionDropsReport(action, currentCard, droppedCard, InGameNPCOrPlayer.PlayerAgent, true);
                     texts.Add(Action.FormatCardDropList(dropReport, currentCard, action: action));
                 }
 
@@ -237,7 +239,7 @@ namespace CSFFCardDetailTooltip
                     {
                         CardOnCardAction cardOnCardAction = recipe.GetResult(cookingstatus.Card);
                         CollectionDropReport dropReport =
-                            gm.GetCollectionDropsReport(cardOnCardAction, __instance, null, true);
+                            gm.GetCollectionDropsReport(cardOnCardAction, __instance, null, InGameNPCOrPlayer.PlayerAgent, true);
                         texts.Add("<size=70%>" + Action.FormatCardDropList(dropReport, __instance, indent: 2) +
                                   "</size>");
                     }
@@ -325,11 +327,11 @@ namespace CSFFCardDetailTooltip
                     : effect.EffectName;
                 if ((bool)cardModel.SpoilageTime && (bool)effect.SpoilageRateModifier)
                     baseSpoilageRate.Add(FormatRateEntry(multiplier * effect.SpoilageRateModifier.FloatValue,
-                        entryValue));
+                        entryValue, effect.MultiplySpoilageRate));
                 if ((bool)cardModel.UsageDurability && (bool)effect.UsageRateModifier)
-                    baseUsageRate.Add(FormatRateEntry(multiplier * effect.UsageRateModifier.FloatValue, entryValue));
+                    baseUsageRate.Add(FormatRateEntry(multiplier * effect.UsageRateModifier.FloatValue, entryValue, effect.MultiplyUsageRate));
                 if ((bool)cardModel.FuelCapacity && (bool)effect.FuelRateModifier)
-                    baseFuelRate.Add(FormatRateEntry(multiplier * effect.FuelRateModifier.FloatValue, entryValue));
+                    baseFuelRate.Add(FormatRateEntry(multiplier * effect.FuelRateModifier.FloatValue, entryValue, effect.MultiplyFuelRate));
                 if ((bool)cardModel.Progress && (bool)effect.ConsumableChargesModifier)
                     baseConsumableRate.Add(FormatRateEntry(multiplier * effect.ConsumableChargesModifier.FloatValue,
                         entryValue));
@@ -337,21 +339,26 @@ namespace CSFFCardDetailTooltip
                     baseEvaporationRate.Add(FormatRateEntry(multiplier * effect.LiquidRateModifier, entryValue));
                 if ((bool)cardModel.SpecialDurability1 && (bool)effect.Special1RateModifier)
                     baseSpecial1Rate.Add(FormatRateEntry(multiplier * effect.Special1RateModifier.FloatValue,
-                        entryValue));
+                        entryValue, effect.MultiplySpecial1Rate));
                 if ((bool)cardModel.SpecialDurability2 && (bool)effect.Special2RateModifier)
                     baseSpecial2Rate.Add(FormatRateEntry(multiplier * effect.Special2RateModifier.FloatValue,
-                        entryValue));
+                        entryValue, effect.MultiplySpecial2Rate));
                 if ((bool)cardModel.SpecialDurability3 && (bool)effect.Special3RateModifier)
                     baseSpecial3Rate.Add(FormatRateEntry(multiplier * effect.Special3RateModifier.FloatValue,
-                        entryValue));
+                        entryValue, effect.MultiplySpecial3Rate));
                 if ((bool)cardModel.SpecialDurability4 && (bool)effect.Special4RateModifier)
                     baseSpecial4Rate.Add(FormatRateEntry(multiplier * effect.Special4RateModifier.FloatValue,
-                        entryValue));
+                        entryValue, effect.MultiplySpecial4Rate));
             }
 
             if (__instance.IsLiquidContainer && __instance.ContainedLiquid)
                 foreach (PassiveEffect effect in __instance.ContainedLiquid.PassiveEffects.Values)
-                    baseEvaporationRate.Add(FormatRateEntry(effect.LiquidRateModifier, effect.EffectName));
+                {
+                    if (effect.SpoilageRateModifier != 0)
+                        baseSpoilageRate.Add(FormatRateEntry(effect.SpoilageRateModifier, effect.EffectName, effect.MultiplySpoilageRate));
+                    if (effect.LiquidRateModifier != 0)
+                        baseEvaporationRate.Add(FormatRateEntry(effect.LiquidRateModifier, effect.EffectName));
+                }
 
             CookingRecipe changeRecipe = GetRecipeForCard(__instance);
             CardStateChange? recipeStateChange = changeRecipe?.IngredientChanges;
@@ -736,15 +743,18 @@ namespace CSFFCardDetailTooltip
         [HarmonyPatch(typeof(EquipmentButton), "Update")]
         public static void EquipmentButtonUpdatePatch(EquipmentButton __instance)
         {
+            if (HasWikiMod106)
+                return;
             if (!Enabled)
             {
+                InGamePlayerWeight = null;
                 __instance.SetTooltip(LocalizedString.Equipment, null, null);
             }
             else
             {
                 if (InGamePlayerWeight == null)
                     InGamePlayerWeight = MBSingleton<GameManager>.Instance.InGamePlayerWeight;
-                else if (!(bool)GameManager.DraggedCard)
+                if (!(bool)GameManager.DraggedCard)
                     __instance.SetTooltip(__instance.Title,
                         FormatBasicEntry(
                             $"{InGamePlayerWeight.SimpleCurrentValue}/{InGamePlayerWeight.StatModel.MinMaxValue.y}",
@@ -756,6 +766,8 @@ namespace CSFFCardDetailTooltip
         [HarmonyPatch(typeof(EquipmentButton), "OnDisable")]
         public static void EquipmentButtonOnDisablePatch()
         {
+            if (HasWikiMod106)
+                return;
             InGamePlayerWeight = null;
         }
 

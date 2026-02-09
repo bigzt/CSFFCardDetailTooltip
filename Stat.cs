@@ -10,16 +10,17 @@ namespace CSFFCardDetailTooltip;
 internal class Stat
 {
     [HarmonyPostfix]
-    [HarmonyPatch(typeof(StatStatusGraphics), "Update")]
-    public static void StatStatusGraphicsPatch(StatStatusGraphics __instance)
+    [HarmonyPatch(typeof(TooltipProvider), "OnHoverEnter")]
+    public static void StatStatusGraphicsPatch(TooltipProvider __instance)
     {
+        if (__instance is not StatStatusGraphics statStatusGraphics) return;
         if (Plugin.Enabled)
-            __instance.SetTooltip(__instance.Title,
-                $"{(string.IsNullOrWhiteSpace(__instance.ModelStatus.Description) ? "" : $"{__instance.ModelStatus.Description.ToString()}\n")}{FormatInGameStat(__instance.ModelStatus.ParentStat)}",
-                "");
+            statStatusGraphics.SetTooltip(statStatusGraphics.Title,
+            $"{(string.IsNullOrWhiteSpace(statStatusGraphics.ModelStatus.Description) ? "" : $"{statStatusGraphics.ModelStatus.Description.ToString()}\n")}{FormatInGameStat(statStatusGraphics.ModelStatus.ParentStat)}",
+            "");
         else
             //Reset the tool tip to the base game settings.
-            __instance.SetTooltip(__instance.ModelStatus.GameName, __instance.ModelStatus.Description, "");
+            __instance.SetTooltip(statStatusGraphics.ModelStatus.GameName, statStatusGraphics.ModelStatus.Description, "");
     }
 
     [HarmonyPrefix]
@@ -100,7 +101,9 @@ internal class Stat
                 if (staleness.Quantity > -1 && stat.StatModel.StalenessMultiplier != 0)
                     stalenessText.Add(FormatBasicEntry(
                         $"{Mathf.Pow(stat.StatModel.StalenessMultiplier, staleness.Quantity + 1):G3}x",
-                        $"(est. {stat.StatModel.NoveltyCooldownDuration - gm.CurrentTickInfo.z + staleness.LastTick + Math.Max(0, staleness.Quantity) * stat.StatModel.NoveltyCooldownDuration}t) {staleness.ModifierSource}",
+                        stat.StatModel.NoveltyCooldownDuration > 0
+                        ? $"(est. {stat.StatModel.NoveltyCooldownDuration - gm.CurrentTickInfo.z + staleness.LastTick + Math.Max(0, staleness.Quantity) * stat.StatModel.NoveltyCooldownDuration}t) {staleness.ModifierSource}"
+                        : staleness.ModifierSource,
                         indent: 2));
             };
             if (stalenessText.Count > 0)
