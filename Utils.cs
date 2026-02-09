@@ -1062,6 +1062,27 @@ public static void GetWoundsForSeverity_il2cpp(this PlayerWounds playerWounds, W
         return !value ? null : FormatTooltipEntry(value.FloatValue, name, indent);
     }
 
+    public static bool GetEffectMultiply(object effect, string memberName, bool defaultValue = false)
+    {
+        if (effect == null) return defaultValue;
+        Type t = effect.GetType();
+        try
+        {
+            var field = AccessTools.Field(t, memberName);
+            if (field != null && field.FieldType == typeof(bool))
+                return (bool)field.GetValue(effect);
+
+            var prop = AccessTools.Property(t, memberName);
+            if (prop != null && prop.CanRead && prop.PropertyType == typeof(bool))
+                return (bool)prop.GetValue(effect, null);
+        }
+        catch
+        {
+            // ignore
+        }
+        return defaultValue;
+    }
+
     public static string FormatBasicEntry(string s1, string s2, string s1Color = "yellow", int indent = 0)
     {
         return $"<indent={indent / 2.2:0.##}em><color=\"{s1Color}\">{s1}</color> {s2}</indent>";

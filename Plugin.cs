@@ -327,11 +327,11 @@ namespace CSFFCardDetailTooltip
                     : effect.EffectName;
                 if ((bool)cardModel.SpoilageTime && (bool)effect.SpoilageRateModifier)
                     baseSpoilageRate.Add(FormatRateEntry(multiplier * effect.SpoilageRateModifier.FloatValue,
-                        entryValue, effect.MultiplySpoilageRate));
+                        entryValue, GetEffectMultiply(effect, "MultiplySpoilageRate")));
                 if ((bool)cardModel.UsageDurability && (bool)effect.UsageRateModifier)
-                    baseUsageRate.Add(FormatRateEntry(multiplier * effect.UsageRateModifier.FloatValue, entryValue, effect.MultiplyUsageRate));
+                    baseUsageRate.Add(FormatRateEntry(multiplier * effect.UsageRateModifier.FloatValue, entryValue, GetEffectMultiply(effect, "MultiplyUsageRate")));
                 if ((bool)cardModel.FuelCapacity && (bool)effect.FuelRateModifier)
-                    baseFuelRate.Add(FormatRateEntry(multiplier * effect.FuelRateModifier.FloatValue, entryValue, effect.MultiplyFuelRate));
+                    baseFuelRate.Add(FormatRateEntry(multiplier * effect.FuelRateModifier.FloatValue, entryValue, GetEffectMultiply(effect, "MultiplyFuelRate")));
                 if ((bool)cardModel.Progress && (bool)effect.ConsumableChargesModifier)
                     baseConsumableRate.Add(FormatRateEntry(multiplier * effect.ConsumableChargesModifier.FloatValue,
                         entryValue));
@@ -339,23 +339,23 @@ namespace CSFFCardDetailTooltip
                     baseEvaporationRate.Add(FormatRateEntry(multiplier * effect.LiquidRateModifier, entryValue));
                 if ((bool)cardModel.SpecialDurability1 && (bool)effect.Special1RateModifier)
                     baseSpecial1Rate.Add(FormatRateEntry(multiplier * effect.Special1RateModifier.FloatValue,
-                        entryValue, effect.MultiplySpecial1Rate));
+                        entryValue, GetEffectMultiply(effect, "MultiplySpecial1Rate")));
                 if ((bool)cardModel.SpecialDurability2 && (bool)effect.Special2RateModifier)
                     baseSpecial2Rate.Add(FormatRateEntry(multiplier * effect.Special2RateModifier.FloatValue,
-                        entryValue, effect.MultiplySpecial2Rate));
+                        entryValue, GetEffectMultiply(effect, "MultiplySpecial2Rate")));
                 if ((bool)cardModel.SpecialDurability3 && (bool)effect.Special3RateModifier)
                     baseSpecial3Rate.Add(FormatRateEntry(multiplier * effect.Special3RateModifier.FloatValue,
-                        entryValue, effect.MultiplySpecial3Rate));
+                        entryValue, GetEffectMultiply(effect, "MultiplySpecial3Rate")));
                 if ((bool)cardModel.SpecialDurability4 && (bool)effect.Special4RateModifier)
                     baseSpecial4Rate.Add(FormatRateEntry(multiplier * effect.Special4RateModifier.FloatValue,
-                        entryValue, effect.MultiplySpecial4Rate));
+                        entryValue, GetEffectMultiply(effect, "MultiplySpecial4Rate")));
             }
 
             if (__instance.IsLiquidContainer && __instance.ContainedLiquid)
                 foreach (PassiveEffect effect in __instance.ContainedLiquid.PassiveEffects.Values)
                 {
                     if (effect.SpoilageRateModifier != 0)
-                        baseSpoilageRate.Add(FormatRateEntry(effect.SpoilageRateModifier, effect.EffectName, effect.MultiplySpoilageRate));
+                        baseSpoilageRate.Add(FormatRateEntry(effect.SpoilageRateModifier, effect.EffectName, GetEffectMultiply(effect, "MultiplySpoilageRate")));
                     if (effect.LiquidRateModifier != 0)
                         baseEvaporationRate.Add(FormatRateEntry(effect.LiquidRateModifier, effect.EffectName));
                 }
