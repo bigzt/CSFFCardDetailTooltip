@@ -31,13 +31,22 @@ jobs:
       id: get-version
       shell: pwsh
       run: |
-        # 尝试获取标签，若失败则强制赋予 fallback 版本号 1.0.10
-        $version = git describe --tags 2>$null
-        if ($LASTEXITCODE -ne 0 -or -not $version) {
-          $version = "1.0.10"
+        $version = "1.0.10" # 预设默认版本号
+        
+        # 尝试获取真实的 git tag，若失败则保持默认值
+        $gitVersion = git describe --tags 2>$null
+        if ($LASTEXITCODE -eq 0 -and $gitVersion) {
+            $version = $gitVersion
         }
+        
+        # 清理版本号格式
         $version = $version -replace "^v", "" -replace '([0-9]+\.?)-([0-9]+)-(.+)', '$1-$2.$3'
-        echo "version=$version" >> $env:GITHUB_OUTPUT
+        
+        # 安全写入 GitHub 变量输出
+        "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        
+        # 核心修复：显式宣告执行成功，清除 git 留下的 128 错误码
+        exit 0
         
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
