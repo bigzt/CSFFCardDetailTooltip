@@ -124,3 +124,4 @@ __Toggle Note__: When using the hotkey to enable/disable the detailed tooltips, 
 - Fix ignored possible same weather.
 - Shows actions of liquid containers.
 - Minor bug fix.
+ 
